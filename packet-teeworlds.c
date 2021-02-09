@@ -121,7 +121,7 @@ tw_new_conn(packet_info *pinfo)
 	conversation_t *c = conversation_new(pinfo->num, &pinfo->src, &pinfo->dst,
 		conversation_pt_to_endpoint_type(pinfo->ptype), pinfo->srcport, pinfo->destport, 0);
 
-	struct context *ctx = wmem_alloc(wmem_file_scope(), sizeof *ctx);
+	struct context *ctx = (struct context *)wmem_alloc(wmem_file_scope(), sizeof *ctx);
 	ctx->id = pinfo->num;
 	ctx->version = PROTOCOL_06;
 
@@ -212,7 +212,7 @@ dissect_teeworlds(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void 
 				ctx = tw_new_conn(pinfo);
 			else {
 				conversation_t *c = find_conversation_pinfo(pinfo, 0);
-				ctx = conversation_get_proto_data(c, proto_teeworlds);
+				ctx = (struct context *)conversation_get_proto_data(c, proto_teeworlds);
 			}
 
 			unsigned char magic[4];
@@ -228,13 +228,13 @@ dissect_teeworlds(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void 
 	}
 
 	conversation_t *c = find_conversation_pinfo(pinfo, 0);
-	struct context *ctx = conversation_get_proto_data(c, proto_teeworlds);
+	struct context *ctx = (struct context *)conversation_get_proto_data(c, proto_teeworlds);
 	ti = proto_tree_add_int(tw_tree, hf_teeworlds_protocol_version, tvb, 0, 0, ctx->version);
 	proto_item_set_generated(ti);
 
 	tvbuff_t *next_tvb;
 	if(Packet.m_Flags&NET_PACKETFLAG_COMPRESSION) {
-		unsigned char *buf = wmem_alloc(pinfo->pool, 1400);
+		unsigned char *buf = (unsigned char *)wmem_alloc(pinfo->pool, 1400);
 		int Size = huffman_decompress(&gs_huffctx, tvb_get_ptr(tvb, 3, -1), tvb_captured_length_remaining(tvb, 3), buf, 1400);
 		if(Size < 0) {
 			expert_add_info(pinfo, NULL, &ei_teeworlds_compressionfail);
