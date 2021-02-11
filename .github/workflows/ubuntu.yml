@@ -1,0 +1,40 @@
+name: Build Ubuntu
+
+on: [push]
+
+jobs:
+  ubuntu:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Get wireshark and deps
+        run: |
+          cd ..
+          ls
+          wget https://gitlab.com/wireshark/wireshark/-/archive/master/wireshark-master.tar.gz
+          tar -xvzf wireshark-master.tar.gz
+          sudo ./wireshark-master/tools/debian-setup.sh \
+            --install-optional \
+            --install-test-deps \
+            --install-deb-deps python3-pip -y
+      - name: Patch wireshark
+        run: |
+          cd ../wireshark-master
+          sed -i 's/ethercat/teedissect\n                plugins\/epan\/ethercat/' CMakeLists.txt
+      - name: Build
+        run: |
+          cd ..
+          cp -r teedissect wireshark-master/plugins/epan
+          mkdir build && cd build
+          cmake -GNinja ../wireshark-master
+          ninja
+      - name: Test teeworlds pcaps
+        run: |
+          cd ..
+          ./build/run/tshark -r teedissect/.github/pcap/ddnet_06_join.pcap
+          # TODO: uncomment when 0.7 is not crashing anymore
+          # ./build/run/tshark -r teedissect/.github/pcap/ddnet_06_and_07_join.pcap
+          # ./build/run/tshark -r teedissect/.github/pcap/vanilla_07_join
+          # ./build/run/tshark -r teedissect/.github/pcap/fddrace_06_and_07_join.pcap
